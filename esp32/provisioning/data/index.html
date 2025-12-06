@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device info</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            border-bottom: 2px solid #007aff;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #ddd;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px 5px 0 0;
+            transition: background 0.3s;
+        }
+
+        .tab-button.active {
+            background: #007aff;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 2px solid #007aff;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        input,
+        select,
+        button {
+            display: block;
+            width: 80%;
+            margin: 10px auto;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #005bb5;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #4CAF50;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            /* Space between toggle and text */
+        }
+
+        .toggle-text {
+            font-size: 16px;
+            vertical-align: middle;
+        }
+
+        #header-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        #logo-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+
+        #logo {
+            height: 80px;
+        }
+
+        #device-id {
+            margin-top: 50px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header-container">
+        <div id="logo-container">
+            <img src="/logo.png" alt="Knightec Logo" id="logo">
+        </div>
+        <h1 id="device-id">Loading...</h1>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab('network')">Network</button>
+        <button class="tab-button" onclick="openTab('mqtt')">MQTT</button>
+        <button class="tab-button" onclick="openTab('system')">Status</button>
+        <button class="tab-button" onclick="openTab('settings')">Settings</button>
+    </div>
+
+    <div id="network" class="tab-content active">
+        <h2>Network Settings</h2>
+        <p>Current SSID: <strong id="current-ssid">Loading...</strong></p>
+        <p>Local IP: <strong id="local-ip">Loading...</strong></p>
+        <p>RSSI: <strong id="rssi">Loading...</strong> dBm</p>
+
+        <h3>Select Wi-Fi Network</h3>
+        <select id="wifi-list"></select>
+        <input type="text" id="ssid" placeholder="Enter SSID">
+        <input type="password" id="wifi-password" placeholder="Enter Wi-Fi Password">
+        <button onclick="wifiScanNew()">Scan</button>
+        <button onclick="wifiConnect()">Connect</button>
+    </div>
+
+    <div id="mqtt" class="tab-content">
+        <h2>MQTT Settings</h2>
+        <input type="text" id="mqtt-server" placeholder="MQTT Server Address">
+        <input type="number" id="mqtt-port" placeholder="MQTT Port">
+        <input type="text" id="mqtt-user" placeholder="MQTT Username">
+        <input type="password" id="mqtt-password" placeholder="MQTT Password">
+        <button onclick="mqttUpdateSettings()">Save MQTT Settings</button>
+    </div>
+
+    <div id="system" class="tab-content">
+        <h2>System Status</h2>
+
+        <p>Time: <strong id="current-time">Loading...</strong></p>
+
+        <h3>RAM</h3>
+        <p>Total: <strong id="total-ram">Loading...</strong></p>
+        <p>Used: <strong id="used-ram">Loading...</strong></p>
+        <p>Free: <strong id="free-ram">Loading...</strong></p>
+
+        <h3>LittleFS</h3>
+        <p>Total: <strong id="total-flash">Loading...</strong></p>
+        <p>Used: <strong id="used-flash">Loading...</strong></p>
+        <p>Free: <strong id="free-flash">Loading...</strong></p>
+
+        <h3>FreeRTOS</h3>
+        <p>FreeRTOS Tasks: <strong id="task-count">Loading...</strong></p>
+        <pre id="task-info">Loading...</pre>
+    </div>
+
+    <div id="settings" class="tab-content">
+        <h2>System Settings</h2>
+        <div class="toggle-container">
+            <label class="switch">
+                <input type="checkbox" id="telnet-toggle" onchange="toggleTelnet()">
+                <span class="slider"></span>
+            </label>
+            <span class="toggle-text">Telnet Server</span>
+        </div>
+    </div>
+
+    <script>
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function wifiFetchStatus() {
+            fetch('/wifi_fetch_status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("device-id").textContent = data.device_id;
+                    document.getElementById("current-ssid").textContent = data.ssid;
+                    document.getElementById("local-ip").textContent = data.local_ip;
+                    document.getElementById("rssi").textContent = data.rssi;
+                    let ssid = document.getElementById("ssid").value;
+                    if (ssid == "") {
+                        document.getElementById("ssid").value = data.ssid;
+                    }
+                });
+        }
+
+        function updateSSID() {
+            let selectedSSID = document.getElementById("wifi-list").value;
+            if (selectedSSID) {
+                document.getElementById("ssid").value = selectedSSID;
+            }
+        }
+
+        function wifiScanResult() {
+            fetch('/wifi_scan_result')
+                .then(response => response.json())
+                .then(data => {
+                    let wifiList = document.getElementById("wifi-list");
+                    let ssid = document.getElementById("ssid").value;
+                    wifiList.innerHTML = "";
+                    data.forEach(network => {
+                        let option = document.createElement("option");
+                        option.value = network.ssid;
+                        option.text = network.ssid + " (" + network.rssi + " dBm)";
+                        wifiList.appendChild(option);
+                    });
+                    if (ssid) {
+                        let options = wifiList.getElementsByTagName('option');
+                        for (let i = 0; i < options.length; i++) {
+                            if (options[i].value === ssid) {
+                                options[i].selected = true;
+                                break;
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching Wi-Fi list:', error));
+        }
+
+        function wifiScanResult2() {
+            fetch('/wifi_scan_result')
+                .then(response => response.json())
+                .then(data => {
+                    let wifiList = document.getElementById("wifi-list");
+                    let ssid = document.getElementById("ssid").value;
+                    wifiList.innerHTML = "";
+                    data.forEach(network => {
+                        let option = document.createElement("option");
+                        option.value = network.ssid;
+                        option.text = network.ssid + " (" + network.rssi + " dBm)";
+                        wifiList.appendChild(option);
+                    });
+                    alreadySelected = data.find(network => network.ssid === ssid);
+                    if (alreadySelected) {
+                        wifiList.value = ssid;
+                    }
+                    else {
+                        let option = document.createElement("option");
+                        option.value = ssid;
+                        option.text = ssid;
+                        wifiList.appendChild(option);
+                        wifiList.value = ssid;
+                    }
+                });
+        }
+
+        function wifiScanNew() {
+            fetch('/wifi_scan_new')
+                .catch(error => console.error('Error scanning Wi-Fi:', error));
+        }
+
+        function wifiConnect() {
+            let ssid = document.getElementById("ssid").value;
+            let password = document.getElementById("wifi-password").value;
+            let formData = new URLSearchParams();
+
+            if (!ssid) {
+                alert("Please enter an SSID.");
+                return;
+            }
+
+            formData.append("ssid", ssid);
+            formData.append("password", password);
+
+            fetch('/wifi_connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            }).then(response => response.text()).then(alert);
+        }
+
+        function mqttUpdateSettings() {
+            let formData = new URLSearchParams();
+            formData.append("server", document.getElementById("mqtt-server").value);
+            formData.append("port", document.getElementById("mqtt-port").value);
+            formData.append("user", document.getElementById("mqtt-user").value);
+            formData.append("password", document.getElementById("mqtt-password").value);
+
+            fetch('/mqtt_update_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            }).then(response => response.text()).then(alert);
+        }
+
+        function mqttFetchSettings() {
+            fetch('/mqtt_fetch_settings')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("mqtt-server").value = data.server;
+                    document.getElementById("mqtt-port").value = data.port;
+                    document.getElementById("mqtt-user").value = data.user;
+                    document.getElementById("mqtt-password").value = data.password;
+                });
+        }
+
+        function systemFetchStatus() {
+            fetch('/system_fetch_status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("current-time").textContent = data.current_time;
+
+                    document.getElementById("free-ram").textContent = data.free_ram + " Bytes";
+                    document.getElementById("used-ram").textContent = data.used_ram + " Bytes";
+                    document.getElementById("total-ram").textContent = data.total_ram + " Bytes";
+
+                    document.getElementById("free-flash").textContent = data.free_flash + " Bytes";
+                    document.getElementById("used-flash").textContent = data.used_flash + " Bytes";
+                    document.getElementById("total-flash").textContent = data.total_flash + " Bytes";
+
+                    document.getElementById("task-count").textContent = data.task_count;
+                });
+        }
+
+        function toggleTelnet() {
+            let isEnabled = document.getElementById("telnet-toggle").checked;
+            let formData = new URLSearchParams();
+
+            formData.append("enabled", isEnabled ? 'true' : 'false');
+
+            fetch('/set_telnet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            }).then(response => response.text()).then(alert);
+        }
+
+        function fetchTelnetStatus() {
+            fetch('/get_telnet')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("telnet-toggle").checked = data.enabled;
+                })
+                .catch(error => console.error('Error fetching Telnet status:', error));
+        }
+
+        document.addEventListener("DOMContentLoaded", fetchTelnetStatus);
+        document.getElementById("wifi-list").addEventListener('change', function () {
+            userSelectedSSID = true;
+            updateSSID();
+        });
+
+        wifiFetchStatus();
+        wifiScanResult();
+        mqttFetchSettings();
+        systemFetchStatus();
+
+        setInterval(wifiFetchStatus, 1000);
+        setInterval(wifiScanResult, 5000);
+        setInterval(systemFetchStatus, 1000);
+    </script>
+</body>
+
+</html>

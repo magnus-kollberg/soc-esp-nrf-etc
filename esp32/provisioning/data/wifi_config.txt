@@ -1,0 +1,2 @@
+ssid=Semcon_lab
+password=Smart123!

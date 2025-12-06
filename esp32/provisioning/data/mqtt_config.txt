@@ -1,0 +1,4 @@
+server=52.158.45.143
+port=1883
+user=semcon
+password=iot_cop123!
